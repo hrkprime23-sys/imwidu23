@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12081f">
+<title>For You</title>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#12081f;color:#ffe9f0;font-family:'Dancing Script','Segoe Script','Brush Script MT',cursive;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body{background:radial-gradient(ellipse at 50% 30%,#4a1d54 0%,#220f35 55%,#12081f 100%)}
+#bg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+.scene{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:env(safe-area-inset-top) 20px env(safe-area-inset-bottom);opacity:0;visibility:hidden;transition:opacity 1.2s,visibility 0s 1.2s}
+.scene.on{opacity:1;visibility:visible;transition:opacity 1.2s}
+.t{font-size:clamp(26px,7.5vw,40px);line-height:1.3;text-shadow:0 0 22px rgba(255,120,180,.55);max-width:90vw}
+.sm{font-size:20px;opacity:.7;margin-top:10px;animation:pulse 2.2s ease-in-out infinite}
+#open{background:none;border:0;color:#ff6b9d;font-size:96px;line-height:1;margin-bottom:14px;cursor:pointer;filter:drop-shadow(0 0 22px rgba(255,90,150,.7));animation:beat 1.3s ease-in-out infinite}
+#bq{width:min(88vw,46dvh);height:auto;filter:drop-shadow(0 0 18px rgba(255,140,190,.35));animation:float 5s ease-in-out infinite alternate}
+#hug{width:min(96vw,42dvh);height:auto;overflow:hidden}
+#s4{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 84px)}
+#c4{font-size:clamp(22px,6vw,32px);margin-top:6px}
+.cap{opacity:0;transition:opacity 1.6s;margin-top:10px}
+.cap.show{opacity:1}
+.re{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translateX(-50%);white-space:nowrap;font:inherit;font-size:26px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(60,0,30,.6);background:linear-gradient(135deg,#ff5c8a,#c9438f);border:0;border-radius:32px;padding:10px 34px;box-shadow:0 4px 20px rgba(255,90,150,.5);opacity:0;pointer-events:none;transition:opacity 1.6s}
+.re.show{opacity:1;pointer-events:auto}
+#ln{font-size:clamp(34px,10vw,58px);line-height:1.25;max-width:88vw;opacity:0;filter:blur(10px);transform:translateY(16px) scale(.96);transition:opacity 1.4s ease,filter 1.4s ease,transform 1.4s ease;text-shadow:0 0 26px rgba(255,120,180,.6)}
+#ln.show{opacity:1;filter:none;transform:none}
+.p{transform-box:fill-box;transform-origin:50% 100%;transform:scale(0);animation:pop 1.2s cubic-bezier(.3,1.6,.5,1) forwards}
+.wrap{animation:fade 1s backwards}
+@keyframes grow{to{stroke-dashoffset:0}}
+@keyframes pop{to{transform:scale(1)}}
+@keyframes fade{from{opacity:0}}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes pulse{50%{opacity:.25}}
+@keyframes float{to{transform:translateY(-6px)}}
+@media(prefers-reduced-motion:reduce){#open,.sm,#bq{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<section class="scene on" id="s1">
+  <button id="open" aria-label="Open your gift">&#9829;</button>
+  <p class="t" id="to"></p>
+  <p class="sm">tap to open</p>
+</section>
+
+<section class="scene" id="s2">
+  <svg id="bq" viewBox="0 0 300 400" aria-hidden="true"></svg>
+  <p class="t cap" id="cap"></p>
+</section>
+
+<section class="scene" id="s3">
+  <p id="ln"></p>
+</section>
+
+<section class="scene" id="s4">
+  <svg id="hug" viewBox="0 0 300 300" aria-hidden="true"></svg>
+  <p class="t cap" id="c4"></p>
+  <button class="re" id="re">replay &#9829;</button>
+</section>
+
+<script>
+/* ===== Edit these two things to make it yours ===== */
+const TO = "My Love";
+const LINES = [
+  "You are not alone.",
+  "Even when the days feel quiet,",
+  "and no one around seems to see you,",
+  "I see you.",
+  "You are braver than you think.",
+  "Every day you show up, you win.",
+  "I'm so proud of you, every single day.",
+  "Friends will come, in their own time.",
+  "Until then, I'm right here.",
+  "When you feel small, remember how loved you are.",
+  "Every thought of mine ends with you.",
+  "Wherever you walk, I'm with you.",
+  "Through the hard days and the happy ones,",
+  "you will never walk alone.",
+  "Always."
+];
+const END = "I'm always with you.";
+/* ================================================== */
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const cl = (v, a, b) => Math.min(b, Math.max(a, v));
+const ez = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+let run = 0;
+$('to').textContent = "For you, " + TO;
+$('cap').textContent = "For you, " + TO;
+$('c4').innerHTML = "Wherever you are, whatever you face,<br>" + END;
+
+function go(id){ document.querySelectorAll('.scene').forEach(s => s.classList.toggle('on', s.id === id)); }
+
+/* ---------- floating hearts & petals ---------- */
+const cv = $('bg'), cx = cv.getContext('2d');
+let W, H, D;
+function rs(){ D = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W*D; cv.height = H*D; cx.setTransform(D,0,0,D,0,0); }
+addEventListener('resize', rs); rs();
+const P = [], COL = ['255,140,180','255,200,220','255,220,150','200,160,255'];
+function sp(x, y, b){
+  P.push({x, y, vx:(Math.random()-.5)*(b?1.6:.5), vy:-(b?1+Math.random()*1.8:.3+Math.random()*.7),
+    s:b?8+Math.random()*10:4+Math.random()*8, c:COL[Math.random()*4|0], r:Math.random()*6,
+    vr:(Math.random()-.5)*.04, h:Math.random()<(b?1:.35), age:0});
+}
+function heart(x, y, s){
+  cx.beginPath(); cx.moveTo(x, y+s*.5);
+  cx.bezierCurveTo(x-s*1.3, y-s*.2, x-s*.6, y-s*1.1, x, y-s*.4);
+  cx.bezierCurveTo(x+s*.6, y-s*1.1, x+s*1.3, y-s*.2, x, y+s*.5); cx.fill();
+}
+(function loop(){
+  cx.clearRect(0, 0, W, H);
+  if (P.length < 50 && Math.random() < .1) sp(Math.random()*W, H+10, false);
+  for (let i = P.length-1; i >= 0; i--){
+    const p = P[i];
+    p.x += p.vx + Math.sin(p.age/40 + p.r)*.25; p.y += p.vy; p.r += p.vr; p.age++;
+    if (p.y < -20){ P.splice(i,1); continue; }
+    const al = Math.max(0, Math.min(1, p.age/30) * Math.min(1, p.y/(H*.25)) * .8);
+    cx.fillStyle = 'rgba(' + p.c + ',' + al + ')';
+    if (p.h) heart(p.x, p.y, p.s);
+    else { cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.beginPath(); cx.ellipse(0, 0, p.s*.6, p.s, 0, 0, 7); cx.fill(); cx.restore(); }
+  }
+  requestAnimationFrame(loop);
+})();
+
+/* ---------- blooming bouquet ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+function bq(){
+  const s = $('bq');
+  s.innerHTML = '<defs><linearGradient id="wg" x1="0" x2="1"><stop offset="0" stop-color="#f7d6e2"/><stop offset="1" stop-color="#d58aa9"/></linearGradient></defs>';
+  const mk = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); (p||s).appendChild(e); return e; };
+  const F = [
+    [150,95,1.25,'#ff6f9f','#ffc2d6'], [90,140,1,'#ffa94d','#ffe0a3'], [210,140,1,'#a779ff','#dcc6ff'],
+    [55,215,.85,'#ff6b6b','#ffb3b3'], [245,215,.85,'#ff8ec0','#ffd6e8'], [118,190,.9,'#ffd84d','#fff0a8'], [182,190,.9,'#ff6f9f','#ffc2d6']
+  ];
+  F.forEach((f, i) => {
+    const x = f[0], y = f[1];
+    const st = mk('path', {d:'M150 340 Q' + ((150+x)/2 + (x-150)*.15) + ' ' + ((340+y)/2 + 25) + ' ' + x + ' ' + y,
+      fill:'none', stroke:'#5fbf7a', 'stroke-width':4, 'stroke-linecap':'round'});
+    const L = st.getTotalLength();
+    st.style.strokeDasharray = L; st.style.strokeDashoffset = L;
+    st.style.animation = 'grow 1.8s ' + (i*.25) + 's ease-out forwards';
+    const m = st.getPointAtLength(L*.55);
+    const lf = mk('g', {transform:'translate(' + m.x + ',' + m.y + ') rotate(' + (x < 150 ? -50 : 50) + ')'});
+    mk('ellipse', {cx:0, cy:-12, rx:6, ry:13, fill:'#4aa866', 'class':'p'}, lf).style.animationDelay = (i*.25 + 1) + 's';
+  });
+  F.forEach((f, i) => {
+    const g = mk('g', {transform:'translate(' + f[0] + ',' + f[1] + ') scale(' + f[2] + ')'});
+    const base = 1.4 + i*.35;
+    for (let k = 0; k < 16; k++){
+      const o = k < 8, a = o ? k*45 : (k-8)*45 + 22.5;
+      const r = mk('g', {transform:'rotate(' + a + ')'}, g);
+      mk('ellipse', {cx:0, cy:o?-17:-12, rx:o?9:6.5, ry:o?17:12, fill:o?f[4]:f[3], stroke:f[3], 'stroke-width':.6, 'class':'p'}, r)
+        .style.animationDelay = (base + (o?0:.4) + (k%8)*.06) + 's';
+    }
+    mk('circle', {r:6, fill:'#ffd86b', 'class':'p'}, g).style.animationDelay = (base + .9) + 's';
+  });
+  mk('path', {d:'M88 285 Q150 302 212 285 L170 392 Q150 398 130 392Z', fill:'url(#wg)', 'class':'wrap'});
+  mk('path', {d:'M136 346 L150 351 L136 362Z M164 346 L150 351 L164 362Z', fill:'#ff4f84', 'class':'wrap'});
+  mk('circle', {cx:150, cy:351, r:5, fill:'#ff4f84', 'class':'wrap'});
+}
+
+/* ---------- the hug ---------- */
+const SK = '#f3c9a5';
+function face(p){
+  return '<ellipse id="'+p+'e1" cx="4" cy="-20" rx="2.2" ry="2.4" fill="#2a1a22"/><ellipse id="'+p+'e2" cx="13" cy="-20" rx="2.2" ry="2.4" fill="#2a1a22"/>' +
+    '<circle cx="15" cy="-13" r="3" fill="#ff8fa3" opacity=".5"/><path d="M5 -12 Q10 -8 15 -12" stroke="#2a1a22" stroke-width="1.6" fill="none" stroke-linecap="round"/>';
+}
+function fig(p, o){
+  const arm = '<line y2="54" stroke="'+o.arm+'" stroke-width="11" stroke-linecap="round"/><circle cy="56" r="5.5" fill="'+SK+'"/>';
+  const leg = '<line y2="'+(-o.hip)+'" stroke="'+o.leg+'" stroke-width="'+o.lw+'" stroke-linecap="round"/><ellipse cx="3" cy="'+(-o.hip)+'" rx="8" ry="4" fill="#2a2238"/>';
+  return [
+    '<g id="'+p+'"><g id="'+p+'l1">'+leg+'</g><g id="'+p+'l2">'+leg+'</g><g id="'+p+'ba">'+arm+'</g>' +
+    '<path d="'+o.torso+'" fill="'+o.cl+'"/><g id="'+p+'h">'+o.head+'</g></g>',
+    '<g id="'+p+'fa">'+arm+'</g>'
+  ];
+}
+const boy = fig('B', {hip:-62, lw:12, leg:'#34324d', arm:'#5b8def', cl:'#5b8def',
+  torso:'M-20 -122 Q-20 -128 -12 -128 L12 -128 Q20 -128 20 -122 L18 -62 L-18 -62Z',
+  head:'<circle r="19" cy="-20" fill="'+SK+'"/>'+face('B')+'<path d="M-19 -22 Q-20 -44 0 -42 Q20 -44 19 -24 Q10 -33 -19 -22Z" fill="#2b1a12"/>'});
+const girl = fig('G', {hip:-50, lw:9, leg:SK, arm:'#ff7aa8', cl:'#ff7aa8',
+  torso:'M-15 -128 L15 -128 L28 -50 L-28 -50Z',
+  head:'<path d="M-20 -20 Q-22 -42 0 -40 Q22 -42 20 -20 L22 10 Q0 18 -22 10Z" fill="#3b2314"/><circle r="17" cy="-19" fill="'+SK+'"/>'+face('G')+
+    '<path d="M-17 -20 Q-10 -40 4 -35 Q16 -33 17 -20 Q6 -30 -17 -20Z" fill="#3b2314"/><circle cx="-9" cy="-35" r="4.5" fill="#ffd86b"/><circle cx="-9" cy="-35" r="2" fill="#ff4f84"/>'});
+$('hug').innerHTML = '<ellipse cx="150" cy="266" rx="115" ry="7" fill="#000" opacity=".25"/>' + girl[0] + boy[0] + girl[1] + boy[1];
+
+function place(p, x, y, sx, sw, h, ph){
+  const base = 'translate(' + x + ',' + y + ') scale(' + sx + ',' + Math.abs(sx) + ')';
+  const set = (id, v) => $(id).setAttribute('transform', v);
+  const hip = p === 'B' ? -62 : -50;
+  set(p, base);
+  set(p+'fa', base + ' translate(14,-120) rotate(' + (sw*24*(1-h) - 105*h) + ')');
+  set(p+'ba', 'translate(-14,-120) rotate(' + (-sw*24*(1-h) - 100*h) + ')');
+  set(p+'l1', 'translate(-7,' + hip + ') rotate(' + (sw*28) + ')');
+  set(p+'l2', 'translate(7,' + hip + ') rotate(' + (-sw*28) + ')');
+  set(p+'h', 'translate(0,-128) rotate(' + (h*8) + ')');
+  const ry = 2.4 - 1.9*h;
+  $(p+'e1').setAttribute('ry', ry); $(p+'e2').setAttribute('ry', ry);
+}
+function hug(id){
+  const t0 = performance.now(); let shown = false, fr = 0;
+  (function f(now){
+    if (id !== run) return;
+    const T = (now - t0)/1000, w = cl(T/5, 0, 1), e = ez(w), h = ez(cl((T-5)/1.8, 0, 1));
+    const amp = cl((1-w)*6, 0, 1), ph = T*8;
+    const bob = -Math.abs(Math.sin(ph))*3*amp, sway = h >= 1 ? Math.sin(T*1.6)*1.5 : 0;
+    place('B', -35 + 163*e + sway, 260 + bob, 1, Math.sin(ph)*amp, h);
+    place('G', 335 - 163*e + sway, 260 + bob, -.93, Math.sin(ph+1.2)*amp, h);
+    if (h >= 1 && fr++ % 28 === 0) sp(W/2 + (Math.random()-.5)*90, H*.38, true);
+    if (!shown && T > 7){ shown = true; $('c4').classList.add('show'); $('re').classList.add('show'); }
+    requestAnimationFrame(f);
+  })(performance.now());
+}
+
+/* ---------- timeline ---------- */
+async function play(){
+  const id = ++run, ok = ms => sleep(ms).then(() => id === run);
+  ['cap','c4','re','ln'].forEach(i => $(i).classList.remove('show'));
+  go('s2');
+  if (!await ok(600)) return;
+  bq();
+  if (!await ok(6600)) return;
+  $('cap').classList.add('show');
+  for (let i = 0; i < 14; i++) sp(W/2 + (Math.random()-.5)*W*.6, H*.55, true);
+  if (!await ok(3800)) return;
+  go('s3');
+  if (!await ok(1600)) return;
+  for (const l of LINES){
+    $('ln').textContent = l;
+    $('ln').classList.add('show');
+    if (!await ok(2300 + l.length*45)) return;
+    $('ln').classList.remove('show');
+    if (!await ok(1400)) return;
+  }
+  go('s4');
+  if (!await ok(1000)) return;
+  hug(id);
+}
+$('s1').addEventListener('click', play);
+$('re').addEventListener('click', e => { e.stopPropagation(); play(); });
+</script>
+</body>
+</html>
